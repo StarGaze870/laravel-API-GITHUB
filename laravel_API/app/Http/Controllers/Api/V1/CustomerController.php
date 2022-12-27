@@ -3,12 +3,13 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Models\Customer;
+use App\Models\Invoice;
 use App\Http\Requests\StoreCustomerRequest;
 use App\Http\Requests\UpdateCustomerRequest;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\V1\CustomerResource;
 use App\Http\Resources\V1\CustomerCollection;
-use App\Services\V1\CustomerQuery;
+use App\Filters\V1\CustomerFilters;
 use Illuminate\Http\Request;
 
 class CustomerController extends Controller
@@ -20,16 +21,28 @@ class CustomerController extends Controller
      */
     public function index(Request $request)
     {
-        $filter = new CustomerQuery();
-        $queryItems = $filter->transform($request); // [['column', 'operator', 'value']]
+        $filter = new CustomerFilters();
+        $filterItems = $filter->transform($request); // [['column', 'operator', 'value']]
+        
+        $includeInvoices = $request->query('includeInvoices');                
 
-        if (count($queryItems) == 0) {
-            return new CustomerCollection(Customer::paginate());
-        } else {
-            return new CustomerCollection(Customer::where($queryItems)->paginate());
-        }                
+        // \Log::info($includeInvoices);
+        // \Log::info(gettype($includeInvoices));       
+        // \Log::info($request);
+        // \Log::error('Something is really going wrong.');
 
-        // return new CustomerCollection(Customer::paginate());
+        $customers = Customer::where($filterItems);
+
+        if (strcmp($includeInvoices, 'true') == 0) {
+            $customers = $customers->with('invoices');            
+        }        
+        else if (strcmp($includeInvoices, 'false') == 0) {
+            
+            return new CustomerCollection(Invoice::rightJoin('customers', 'customers.id', '=', 'invoices.customer_id')->where('invoices.customer_id', '=', null)->paginate()->appends($request->query()));
+            // $customers = $customers->without('invoices');            
+        }        
+        // $test = new CustomerCollection();
+        return new CustomerCollection($customers->paginate()->appends($request->query()));        
     }
 
     /**
@@ -61,9 +74,11 @@ class CustomerController extends Controller
      */
     public function show(Customer $customer)
     {
-        // return Customer::where('id', 10)->get();
+        $includeInvoices = request()->query('includeInvoices');                
 
-
+        if ($includeInvoices) {
+            return new CustomerResource($customer->LoadMissing('invoices'));
+        }
         return new CustomerResource($customer);
     } 
 
