@@ -1,10 +1,11 @@
 <?php
 
-namespace App\Http\Requests;
+namespace App\Http\Requests\V1;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
-class StoreInvoiceRequest extends FormRequest
+class DeleteCustomerRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -13,7 +14,8 @@ class StoreInvoiceRequest extends FormRequest
      */
     public function authorize()
     {
-        return false;
+        $user = $this->user();
+        return $user != null && $user->tokenCan('delete');
     }
 
     /**
@@ -23,8 +25,6 @@ class StoreInvoiceRequest extends FormRequest
      */
     public function rules()
     {
-        return [
-            //
-        ];
+        
     }
 }
